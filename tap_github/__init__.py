@@ -15,11 +15,13 @@ logger = singer.get_logger()
 REQUIRED_CONFIG_KEYS = ['access_token', 'repository']
 
 KEY_PROPERTIES = {
+    'repo_details': ['id'],
     'commits': ['sha'],
     'comments': ['id'],
     'issues': ['id'],
     'assignees': ['id'],
     'collaborators': ['id'],
+    'contributors': ['id'],
     'pull_requests':['id'],
     'stargazers': ['user_id'],
     'releases': ['id'],
@@ -758,6 +760,27 @@ def get_all_collaborators(schema, repo_path, state, mdata):
 
     return state
 
+def get_all_contributors(schema, repo_path, state, mdata):
+    '''
+    https://developer.github.com/v3/repos/contributors/#list-contributors
+    '''
+    with metrics.record_counter('contributors') as counter:
+        for response in authed_get_all_pages(
+                'contributors',
+                'https://api.github.com/repos/{}/contributors'.format(repo_path)
+        ):
+            contributors = response.json()
+            extraction_time = singer.utils.now()
+            for contributor in contributors:
+                contributor['_sdc_repository'] = repo_path
+                with singer.Transformer() as transformer:
+                    rec = transformer.transform(contributor, schema, metadata=metadata.to_map(mdata))
+                singer.write_record('contributors', rec, time_extracted=extraction_time)
+                singer.write_bookmark(state, repo_path, 'contributor', {'since': singer.utils.strftime(extraction_time)})
+                counter.increment()
+
+    return state
+
 def get_all_commits(schema, repo_path,  state, mdata):
     '''
     https://developer.github.com/v3/repos/commits/#list-commits-on-a-repository
@@ -869,6 +892,28 @@ def get_all_stargazers(schema, repo_path, state, mdata):
 
     return state
 
+def get_repo_details(schema, repo_path, state, mdata):
+    '''
+    https://developer.github.com/v3/repos/
+    '''
+    with metrics.record_counter('repo_details') as counter:
+        for response in authed_get_all_pages(
+                'repo_details',
+                'https://api.github.com/repos/{}'.format(repo_path)
+        ):
+            repo_details = response.json()
+            extraction_time = singer.utils.now()
+
+            repo_details['_sdc_repository'] = repo_path
+            with singer.Transformer() as transformer:
+                rec = transformer.transform(repo_details, schema, metadata=metadata.to_map(mdata))
+
+            singer.write_record('repo_details', rec, time_extracted=extraction_time)
+            singer.write_bookmark(state, repo_path, 'repo_details', {'since': singer.utils.strftime(extraction_time)})
+            counter.increment()
+
+    return state
+
 def get_selected_streams(catalog):
     '''
     Gets selected streams.  Checks schema's 'selected'
@@ -895,11 +940,13 @@ def get_stream_from_catalog(stream_id, catalog):
     return None
 
 SYNC_FUNCTIONS = {
+    'repo_details': get_repo_details,
     'commits': get_all_commits,
     'comments': get_all_comments,
     'issues': get_all_issues,
     'assignees': get_all_assignees,
     'collaborators': get_all_collaborators,
+    'contributors': get_all_contributors,
     'pull_requests': get_all_pull_requests,
     'releases': get_all_releases,
     'stargazers': get_all_stargazers,
@@ -915,7 +962,8 @@ SYNC_FUNCTIONS = {
 SUB_STREAMS = {
     'pull_requests': ['reviews', 'review_comments', 'pr_commits'],
     'projects': ['project_cards', 'project_columns'],
-    'teams': ['team_members', 'team_memberships']
+    'teams': ['team_members', 'team_memberships'],
+    'repo_details': ['contributors']
 }
 
 def do_sync(config, state, catalog):

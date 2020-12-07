@@ -1,0 +1,51 @@
+{
+  "type": ["null", "object"],
+  "selected": true,
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": ["null", "integer"]
+    },
+    "description": {
+      "type": ["null", "string"]
+    },
+    "name": {
+      "type": ["null", "string"]
+    },
+    "url": {
+      "type": ["null", "string"]
+    },
+    "html_url": {
+      "type": ["null", "string"]
+    },
+    "forks": {
+      "type": ["null", "integer"]
+    },
+    "git_url": {
+      "type": ["null", "string"]
+    },
+    "ssh_url": {
+      "type": ["null", "string"]
+    },
+    "languages_url": {
+      "type": ["null", "string"]
+    },
+    "open_issues": {
+      "type": ["null", "integer"]
+    },
+    "watchers": {
+      "type": ["null", "integer"]
+    },
+    "created_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": ["null", "string"],
+      "format": "date-time"
+    },
+    "_sdc_repository": {
+      "type": ["string"]
+    }
+  }
+}
